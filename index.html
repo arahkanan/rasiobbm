@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kalkulator BBM Multi-Trip</title>
+    <!-- Library untuk Save as JPG -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; padding: 15px; max-width: 450px; margin: auto; background: #f4f6f8; color: #333; }
+        body { font-family: system-ui, -apple-system, sans-serif; padding: 15px; max-width: 480px; margin: auto; background: #f4f6f8; color: #333; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 15px; }
         h2, h3 { margin-top: 0; text-align: center; }
         label { font-size: 13px; color: #555; display: block; margin-top: 10px; font-weight: bold; }
@@ -13,6 +15,15 @@
         .mode-container { background: #eef2f5; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
         .btn-add { background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; }
         .btn-reset { background: #dc3545; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
+        /* Grid Tombol Action */
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
+        .btn-action { border: none; font-weight: bold; cursor: pointer; color: white; padding: 10px; border-radius: 6px; font-size: 13px; }
+        .btn-wa { background: #25D366; }
+        .btn-copy { background: #17a2b8; }
+        .btn-txt { background: #6c757d; }
+        .btn-jpg { background: #fd7e14; }
+
         .trip-item { background: #f8f9fa; border-left: 4px solid #007bff; padding: 10px; margin-top: 8px; border-radius: 4px; font-size: 14px; }
         .hasil-total { background: #e7f1ff; color: #084298; padding: 15px; border-radius: 8px; text-align: center; margin-top: 15px; }
         .hidden { display: none; }
@@ -51,13 +62,22 @@
         <button class="btn-add" onclick="tambahTrip()">+ Tambah Trip</button>
     </div>
 
-    <!-- Daftar Trip & Hasil -->
+    <!-- Area Laporan (Bisa di-export ke JPG) -->
     <div id="sectionHasil" class="card hidden">
-        <h3>Riwayat & Total Rasio</h3>
-        <div id="daftarTrip"></div>
+        <div id="reportContainer" style="padding: 10px; background: white; border-radius: 8px;">
+            <h3>Laporan Rasio BBM</h3>
+            <div id="daftarTrip"></div>
+            <div id="totalRasio" class="hasil-total"></div>
+        </div>
         
-        <div id="totalRasio" class="hasil-total"></div>
-        
+        <!-- Opsi Export -->
+        <div class="action-grid">
+            <button class="btn-action btn-wa" onclick="shareWA()">WhatsApp</button>
+            <button class="btn-action btn-copy" onclick="copyClipboard()">Copy Text</button>
+            <button class="btn-action btn-txt" onclick="saveTXT()">Save TXT</button>
+            <button class="btn-action btn-jpg" onclick="saveJPG()">Save JPG</button>
+        </div>
+
         <button class="btn-reset" onclick="resetSemua()">Reset Semua Trip</button>
     </div>
 
@@ -79,6 +99,7 @@
             let mode = document.getElementById('modeInput').value;
             let liter = parseFloat(document.getElementById('liter').value) || 0;
             let jarak = 0;
+            let detail = "";
 
             if (liter <= 0) {
                 alert("Masukkan jumlah liter BBM dengan benar!");
@@ -93,18 +114,20 @@
                     return;
                 }
                 jarak = akhir - awal;
+                detail = `KM ${awal} → ${akhir}`;
             } else {
                 jarak = parseFloat(document.getElementById('jarakDirect').value) || 0;
                 if (jarak <= 0) {
                     alert("Masukkan jarak tempuh dengan benar!");
                     return;
                 }
+                detail = `Jarak Langsung`;
             }
 
             let rasio = jarak / liter;
 
-            // Simpan ke array
-            listTrip.push({ jarak, liter, rasio });
+            // Simpan data
+            listTrip.push({ mode, detail, jarak, liter, rasio });
 
             // Reset Form
             document.getElementById('kmAwal').value = '';
@@ -136,8 +159,9 @@
 
                 let div = document.createElement('div');
                 div.className = 'trip-item';
-                div.innerHTML = `<strong>Trip #${index + 1}:</strong> ${trip.jarak.toFixed(1)} km | ${trip.liter} L 
-                                 <br>-> Rasio: <strong>${trip.rasio.toFixed(2)} km/l</strong>`;
+                div.innerHTML = `<strong>Trip #${index + 1} (${trip.detail}):</strong><br>` +
+                                `Jarak: ${trip.jarak.toFixed(1)} km | BBM: ${trip.liter} L<br>` +
+                                `Rasio: <strong>${trip.rasio.toFixed(2)} km/liter</strong>`;
                 container.appendChild(div);
             });
 
@@ -145,8 +169,61 @@
             document.getElementById('totalRasio').innerHTML = `
                 <strong>TOTAL GABUNGAN:</strong><br>
                 Jarak: ${totalJarak.toFixed(1)} km | BBM: ${totalLiter.toFixed(2)} L<br>
-                <span style="font-size: 20px;">Rata-rata: <strong>${totalRasio.toFixed(2)} km/liter</strong></span>
+                <span style="font-size: 18px;">Rata-rata: <strong>${totalRasio.toFixed(2)} km/liter</strong></span>
             `;
+        }
+
+        function generateTextReport() {
+            let text = "📊 *LAPORAN KONSUMSI BBM*\n\n";
+            let totalJarak = 0;
+            let totalLiter = 0;
+
+            listTrip.forEach((trip, i) => {
+                totalJarak += trip.jarak;
+                totalLiter += trip.liter;
+                text += `*Trip #${i + 1}* (${trip.detail})\n`;
+                text += `• Jarak: ${trip.jarak.toFixed(1)} km\n`;
+                text += `• BBM: ${trip.liter} L\n`;
+                text += `• Rasio: ${trip.rasio.toFixed(2)} km/l\n\n`;
+            });
+
+            let avg = totalJarak / totalLiter;
+            text += `------------------------------\n`;
+            text += `*TOTAL GABUNGAN*\n`;
+            text += `Total Jarak: ${totalJarak.toFixed(1)} km\n`;
+            text += `Total BBM: ${totalLiter.toFixed(2)} L\n`;
+            text += `*Rata-rata Rasio: ${avg.toFixed(2)} km/liter*`;
+
+            return text;
+        }
+
+        function copyClipboard() {
+            let txt = generateTextReport();
+            navigator.clipboard.writeText(txt).then(() => alert("Laporan berhasil disalin!"));
+        }
+
+        function shareWA() {
+            let txt = encodeURIComponent(generateTextReport());
+            window.open(`https://wa.me/?text=${txt}`, '_blank');
+        }
+
+        function saveTXT() {
+            let txt = generateTextReport();
+            let blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+            let a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `Laporan_BBM_${new Date().toISOString().slice(0,10)}.txt`;
+            a.click();
+        }
+
+        function saveJPG() {
+            let element = document.getElementById("reportContainer");
+            html2canvas(element).then(canvas => {
+                let a = document.createElement("a");
+                a.href = canvas.toDataURL("image/jpeg");
+                a.download = `Laporan_BBM_${new Date().toISOString().slice(0,10)}.jpg`;
+                a.click();
+            });
         }
 
         function resetSemua() {
