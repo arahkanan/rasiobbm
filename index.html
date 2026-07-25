@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator BBM</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; max-width: 400px; margin: auto; background: #f4f6f8; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #333; text-align: center; }
+        label { font-size: 14px; color: #555; display: block; margin-top: 10px; }
+        input, button { width: 100%; padding: 12px; margin-top: 5px; box-sizing: border-box; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+        button { background: #007bff; color: white; border: none; font-weight: bold; margin-top: 15px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .hasil { margin-top: 15px; padding: 12px; background: #e7f1ff; color: #084298; border-radius: 8px; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Hitung Rasio BBM</h2>
+        
+        <label>KM Awal (Odometer)</label>
+        <input type="number" id="kmAwal" placeholder="Contoh: 12000">
+        
+        <label>KM Akhir (Odometer) / Total KM</label>
+        <input type="number" id="kmAkhir" placeholder="Contoh: 12250">
+        
+        <label>Jumlah Isi BBM (Liter)</label>
+        <input type="number" id="liter" step="0.01" placeholder="Contoh: 20.5">
+        
+        <button onclick="hitung()">HITUNG</button>
+        
+        <div id="result" class="hasil" style="display:none;"></div>
+    </div>
+
+    <script>
+        function hitung() {
+            let awal = parseFloat(document.getElementById('kmAwal').value) || 0;
+            let akhir = parseFloat(document.getElementById('kmAkhir').value) || 0;
+            let liter = parseFloat(document.getElementById('liter').value) || 0;
+
+            if (liter <= 0) {
+                alert("Jumlah liter BBM harus diisi angka lebih dari 0!");
+                return;
+            }
+
+            let jarak = 0;
+            if (akhir > awal) {
+                jarak = akhir - awal;
+            } else if (awal > 0 && akhir === 0) {
+                jarak = awal; // Jika cuma diisi di kolom pertama sebagai total jarak
+            } else {
+                jarak = akhir;
+            }
+
+            if (jarak <= 0) {
+                alert("Masukkan angka KM Awal & Akhir atau total jarak dengan benar!");
+                return;
+            }
+
+            let rasio = jarak / liter;
+
+            let resDiv = document.getElementById('result');
+            resDiv.style.display = 'block';
+            resDiv.innerHTML = `Jarak Tempuh: ${jarak.toFixed(1)} km<br>Rasio: <strong>${rasio.toFixed(2)} km/liter</strong>`;
+        }
+    </script>
+</body>
+</html>
